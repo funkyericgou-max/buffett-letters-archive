@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>巴菲特信件阅读器</title>
+<style>
+:root {
+  --bg: #f6f3ec;
+  --bg-paper: #fffdf8;
+  --ink: #2b2723;
+  --ink-soft: #6b6359;
+  --line: #e4ded2;
+  --accent: #8a5a2b;
+  --accent-soft: #f0e6d6;
+  --mark: #fff0a8;
+  --mark-hover: #ffe27a;
+  --panel-bg: #f1ece1;
+  --danger: #a33a2b;
+  --sidebar-w: 220px;
+  --panel-w: 340px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: "Georgia", "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", serif;
+  background: var(--bg);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ===== 顶部工具栏 ===== */
+.topbar {
+  height: 50px;
+  flex: 0 0 50px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: #fffdf8;
+  border-bottom: 1px solid var(--line);
+}
+.topbar .logo {
+  font-family: "Songti SC", "SimSun", serif;
+  font-weight: bold;
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.topbar .spacer { flex: 1; }
+.topbar .doc-title {
+  font-size: 14px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40%;
+}
+.topbar button {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.topbar button:hover { background: var(--accent-soft); border-color: var(--accent); }
+
+/* ===== 主体三栏 ===== */
+.main {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* 左导航 */
+.sidebar {
+  flex: 0 0 var(--sidebar-w);
+  background: var(--panel-bg);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.sidebar .tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+}
+.sidebar .tabs button {
+  flex: 1;
+  padding: 10px 0;
+  font-family: inherit;
+  font-size: 13px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.sidebar .tabs button.active {
+  color: var(--accent);
+  font-weight: bold;
+  border-bottom-color: var(--accent);
+  background: #fff;
+}
+.sidebar .search {
+  padding: 8px;
+}
+.sidebar .search input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  background: #fff;
+}
+.nav-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0 20px;
+}
+.nav-group-year { margin-top: 4px; }
+.nav-year {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--ink-soft);
+  cursor: pointer;
+  user-select: none;
+}
+.nav-year:hover { background: #e9e2d3; }
+.nav-year .caret { font-size: 10px; transition: transform .15s; }
+.nav-year.open .caret { transform: rotate(90deg); }
+.nav-doc {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px 7px 42px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+.nav-doc:hover { background: #e9e2d3; }
+.nav-doc.active {
+  background: #fff;
+  border-left-color: var(--accent);
+  font-weight: bold;
+}
+.nav-doc .badge {
+  margin-left: auto;
+  font-size: 11px;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 9px;
+  padding: 0 6px;
+  line-height: 16px;
+  min-width: 16px;
+  text-align: center;
+}
+.nav-letter {
+  display: flex;
+  align-items: center;
+  padding: 7px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+.nav-letter:hover { background: #e9e2d3; }
+.nav-letter.active { background: #fff; border-left-color: var(--accent); font-weight: bold; }
+.nav-letter .badge { margin-left: auto; font-size: 11px; color: #fff; background: var(--accent); border-radius: 9px; padding: 0 6px; line-height: 16px; min-width: 16px; text-align: center; }
+.nav-stage { margin-top: 2px; }
+.nav-stage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  font-size: 13.5px;
+  font-weight: bold;
+  color: var(--accent);
+  cursor: pointer;
+  user-select: none;
+  background: #ece5d8;
+  border-top: 1px solid var(--line);
+}
+.nav-stage-head:hover { background: #e4dccb; }
+.nav-stage-head .caret { font-size: 10px; transition: transform .15s; }
+.nav-stage-head.open .caret { transform: rotate(90deg); }
+.nav-kind-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 12px 5px 24px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  user-select: none;
+}
+.nav-kind-head:hover { background: #e9e2d3; }
+.nav-kind-head .caret { font-size: 10px; transition: transform .15s; }
+.nav-kind-head.open .caret { transform: rotate(90deg); }
+.nav-kind-head .stage-range { font-size: 11px; color: #a89a86; margin-left: 4px; }
+.nav-kind-head .kind-count { font-size: 11px; color: var(--accent); }
+
+/* 中间正文 */
+.reader {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--bg);
+  min-width: 0;
+}
+.reader-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 36px 48px 120px;
+}
+.doc-head {
+  text-align: center;
+  margin-bottom: 30px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.doc-head h1 {
+  font-size: 22px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: var(--ink);
+}
+.doc-head .meta { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+.para {
+  font-size: 16.5px;
+  line-height: 2.0;
+  text-align: justify;
+  text-indent: 2em;
+  margin: 0 0 12px;
+  cursor: text;
+}
+.para.para-head {
+  text-indent: 0;
+  font-weight: bold;
+  font-size: 17px;
+  margin-top: 22px;
+}
+.para mark {
+  background: var(--mark);
+  border-radius: 2px;
+  padding: 0 1px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.para mark:hover { background: var(--mark-hover); }
+.para mark.flash { animation: flash 1.2s ease; }
+@keyframes flash {
+  0%, 100% { background: var(--mark); }
+  30% { background: #ffce2e; }
+}
+
+/* 选中后的浮动按钮 */
+#floatBtns {
+  position: fixed;
+  display: none;
+  z-index: 100;
+  transform: translateX(-50%);
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  border-radius: 20px;
+  overflow: hidden;
+}
+#floatBtns button {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 6px 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#floatBtns button + button { border-left: 1px solid rgba(255,255,255,.35); }
+#floatBtns button:hover { background: #6f451f; }
+
+/* 右批注栏 */
+.panel {
+  flex: 0 0 var(--panel-w);
+  background: var(--panel-bg);
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.panel .tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+}
+.panel .tabs button {
+  flex: 1;
+  padding: 11px 0;
+  font-family: inherit;
+  font-size: 13px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.panel .tabs button.active { color: var(--accent); font-weight: bold; border-bottom-color: var(--accent); background: #fff; }
+.panel-body { flex: 1; overflow-y: auto; min-height: 0; }
+.panel-section { display: none; flex-direction: column; height: 100%; }
+.panel-section.active { display: flex; }
+
+/* 批注面板 */
+.ann-toolbar {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ann-toolbar .scope-toggle {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.ann-toolbar button {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.ann-toolbar button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.ann-list { flex: 1; overflow-y: auto; padding: 12px; }
+.ann-empty { color: var(--ink-soft); font-size: 13px; text-align: center; padding: 30px 10px; line-height: 1.8; }
+.ann-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.ann-card .ann-quote {
+  font-size: 12.5px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 6px 8px;
+  border-radius: 4px;
+  border-left: 3px solid var(--accent);
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+.ann-card .ann-note {
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ann-card .ann-note.empty { color: #bbb; font-style: italic; }
+.ann-card .ann-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+.ann-card .ann-foot .loc { flex: 1; }
+.ann-card .ann-foot button {
+  font-family: inherit;
+  font-size: 11px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.ann-card .ann-foot button:hover { color: var(--danger); }
+
+/* 写批注输入框 */
+.ann-editor {
+  border-top: 1px solid var(--line);
+  padding: 10px 12px;
+  background: #fff;
+}
+.ann-editor .quote-preview {
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  max-height: 64px;
+  overflow: hidden;
+  line-height: 1.5;
+}
+.ann-editor textarea {
+  width: 100%;
+  height: 70px;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  resize: vertical;
+  line-height: 1.6;
+}
+.ann-editor .editor-btns { display: flex; gap: 8px; margin-top: 8px; }
+.ann-editor .editor-btns button {
+  flex: 1;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 7px 0;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.ann-editor .editor-btns button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.ann-editor .editor-btns button.primary:hover { background: #6f451f; }
+
+/* AI 面板 */
+.ai-settings {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+.ai-settings .set-row { margin-bottom: 7px; }
+.ai-settings label { display: block; font-size: 11px; color: var(--ink-soft); margin-bottom: 2px; }
+.ai-settings input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 13px;
+}
+.ai-settings .set-btns { display: flex; gap: 6px; margin-top: 6px; }
+.ai-settings .set-btns button {
+  flex: 1; font-family: inherit; font-size: 12px; padding: 5px 0;
+  border: 1px solid var(--line); background: #fff; border-radius: 5px; cursor: pointer;
+}
+.ai-context {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: #f8f4ea;
+  font-size: 12px;
+}
+.ai-context .ctx-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.ai-context .ctx-head b { font-size: 12px; color: var(--ink); }
+.ai-context .ctx-head button { font-family: inherit; font-size: 11px; border: 1px solid var(--line); background: #fff; border-radius: 4px; cursor: pointer; padding: 2px 7px; }
+.ctx-list { max-height: 160px; overflow-y: auto; }
+.ctx-item { display: flex; gap: 6px; align-items: flex-start; padding: 4px 0; font-size: 12px; cursor: pointer; }
+.ctx-item input { margin-top: 2px; }
+.ctx-item .q { color: var(--ink-soft); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.ai-chat { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; position: relative; }
+.ai-chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: #f8f4ea;
+}
+.ai-chat-head .chat-doc {
+  font-size: 12px;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 8px;
+}
+.ai-chat-head button {
+  flex: 0 0 auto;
+  font-family: inherit;
+  font-size: 11px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px 7px;
+  color: var(--ink-soft);
+}
+.ai-chat-head button:hover { color: var(--danger); border-color: var(--danger); }
+.ai-msg { max-width: 88%; padding: 9px 12px; border-radius: 10px; font-size: 14px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+.ai-msg.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 3px; }
+.ai-msg.assistant { align-self: flex-start; background: #fff; border: 1px solid var(--line); border-bottom-left-radius: 3px; }
+.ai-msg.assistant .loading-dots::after { content: '…'; animation: dots 1.2s steps(4) infinite; }
+@keyframes dots { 0% { content: ''; } 25% { content: '·'; } 50% { content: '··'; } 75% { content: '···'; } }
+.ai-input {
+  border-top: 1px solid var(--line);
+  padding: 10px 12px;
+  background: #fff;
+  display: flex;
+  gap: 8px;
+}
+.ai-input textarea {
+  flex: 1;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  resize: none;
+  height: 52px;
+  line-height: 1.6;
+}
+.ai-input button {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 0 16px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+.ai-input button:disabled { opacity: .5; cursor: not-allowed; }
+
+/* toast */
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  background: rgba(40,35,30,.92);
+  color: #fff;
+  font-size: 13px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity .25s;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">巴菲特信件阅读器</div>
+  <div class="doc-title" id="docTitle"></div>
+  <div class="spacer"></div>
+  <button id="btnExport">导出批注</button>
+  <button id="btnImport">导入批注</button>
+  <input type="file" id="importFile" accept="application/json" style="display:none">
+  <button id="btnSettings">AI 设置</button>
+</div>
+
+<div class="main">
+  <!-- 左导航 -->
+  <aside class="sidebar">
+    <div class="search"><input id="searchBox" type="text" placeholder="搜索年份、标题或场次…"></div>
+    <div class="nav-list" id="navList"></div>
+  </aside>
+
+  <!-- 正文 -->
+  <main class="reader" id="reader">
+    <div class="reader-inner" id="readerInner"></div>
+  </main>
+
+  <!-- 右侧面板 -->
+  <aside class="panel">
+    <div class="tabs">
+      <button id="tabAnns" class="active">批注</button>
+      <button id="tabAI">AI 探讨</button>
+    </div>
+    <div class="panel-body">
+      <!-- 批注面板 -->
+      <div class="panel-section active" id="secAnns">
+        <div class="ann-toolbar">
+          <button id="scopeCurrent" class="on">当前文档</button>
+          <button id="scopeAll">全部</button>
+          <span class="scope-toggle" id="annCount"></span>
+        </div>
+        <div class="ann-list" id="annList"></div>
+        <div class="ann-editor" id="annEditor" style="display:none">
+          <div class="quote-preview" id="annQuotePreview"></div>
+          <textarea id="annNoteInput" placeholder="写下你的想法…"></textarea>
+          <div class="editor-btns">
+            <button id="annCancel">取消</button>
+            <button id="annSave" class="primary">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI 面板 -->
+      <div class="panel-section" id="secAI">
+        <div class="ai-settings" id="aiSettings" style="display:none">
+          <div class="set-row">
+            <label>API Key（仅存于本机浏览器）</label>
+            <input type="password" id="aiKey" placeholder="sk-...">
+          </div>
+          <div class="set-row">
+            <label>接口地址</label>
+            <input type="text" id="aiBase" value="https://api.deepseek.com">
+          </div>
+          <div class="set-row">
+            <label>模型</label>
+            <input type="text" id="aiModel" value="deepseek-chat">
+          </div>
+          <div class="set-btns">
+            <button id="aiSave">保存设置</button>
+            <button id="aiHide">收起</button>
+          </div>
+        </div>
+        <div class="ai-context">
+          <div class="ctx-head">
+            <b>本篇批注作上下文（勾选后 AI 会读到）</b>
+            <button id="ctxClear">清空勾选</button>
+          </div>
+          <div class="ctx-list" id="ctxList"></div>
+        </div>
+        <div class="ai-chat-head">
+          <span class="chat-doc" id="aiChatDoc"></span>
+          <button id="aiChatClear">清空对话</button>
+        </div>
+        <div class="ai-chat" id="aiChat"></div>
+        <div class="ai-input">
+          <textarea id="aiInput" placeholder="和 AI 讨论你的批注…（Enter 发送，Shift+Enter 换行）"></textarea>
+          <button id="aiSend">发送</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div id="floatBtns">
+  <button id="floatBtnAnn">✎ 写批注</button>
+  <button id="floatBtnAI">💬 问 AI</button>
+</div>
+<div id="toast"></div>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var DATA = window.BUFFETT_DATA || [];
+  var STORE_KEY = "buffett-reader-annotations-v1";
+  var AI_KEY = "buffett-reader-ai-settings-v1";
+  var AI_CHAT_KEY = "buffett-reader-ai-chats-v1";
+  var AI_SEL_KEY = "buffett-reader-ai-context-v1";
+  var LAST_POS_KEY = "buffett-reader-last-position-v1";
+  var DEFAULT_API_KEY = "sk-65184a8379af44d595a671c060c1f3da";
+
+  // ---------- 状态 ----------
+  var currentKind = "letter";       // letter | meeting
+  var currentDocId = null;
+  var currentDoc = null;
+  var scope = "current";            // current | all
+  var panelTab = "anns";
+  // 待保存的选中区间
+  var pending = null;               // {docId, paraIdx, start, end, quote}
+  var aiChats = loadAiChats();      // { docId: [{role, content}, ...] } 每篇文档的对话历史
+  var aiSelected = loadAiSelected(); // { docId: { annId: true } } 每篇文档勾选的上下文批注
+
+  var anns = loadAnns();            // 全部批注数组
+
+  // ---------- 工具 ----------
+  function $(id) { return document.getElementById(id); }
+
+  function toast(msg) {
+    var t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.classList.remove("show"); }, 2200);
+  }
+
+  function uid() {
+    return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+  }
+
+  function loadAnns() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
+  function saveAnns() {
+    localStorage.setItem(STORE_KEY, JSON.stringify(anns));
+  }
+  function loadLastPos() {
+    try { return JSON.parse(localStorage.getItem(LAST_POS_KEY)) || null; } catch (e) { return null; }
+  }
+  function saveLastPos() {
+    if (!currentDocId) return;
+    try {
+      localStorage.setItem(LAST_POS_KEY, JSON.stringify({ docId: currentDocId, scrollTop: $("reader").scrollTop }));
+    } catch (e) {}
+  }
+
+  function fmtTime(ts) {
+    var d = new Date(ts);
+    function p(n) { return n < 10 ? "0" + n : "" + n; }
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  // ---------- 数据访问 ----------
+  function findDoc(id) {
+    for (var i = 0; i < DATA.length; i++) if (DATA[i].id === id) return DATA[i];
+    return null;
+  }
+  function docsOfKind(kind) {
+    return DATA.filter(function (d) { return d.kind === kind; });
+  }
+  function annsOfDoc(docId) {
+    return anns.filter(function (a) { return a.docId === docId; })
+      .sort(function (a, b) { return (a.paraIdx - b.paraIdx) || (a.start - b.start); });
+  }
+  function annCountOf(docId) { return annsOfDoc(docId).length; }
+
+  // ---------- 三阶段分类 ----------
+  var STAGES = [
+    { label: "壹 · 早期合伙人时期" },
+    { label: "贰 · 黄金进化期" },
+    { label: "叁 · 巨无霸运营期" },
+  ];
+  var KIND_LABEL = { letter: "致股东信", meeting: "股东大会问答" };
+  var KIND_ORDER = ["letter", "meeting"];
+
+  function stageOf(d) {
+    if (d.kind === "meeting") return d.year <= 1999 ? 1 : 2;
+    return d.year <= 1969 ? 0 : (d.year <= 1999 ? 1 : 2);
+  }
+  function docLabel(d) {
+    if (d.kind === "meeting") return d.session ? d.year + " · " + d.session : d.year;
+    return d.year;
+  }
+  function kindIdOf(d) { return "k" + stageOf(d) + "-" + d.kind; }
+
+  // ---------- 导航 ----------
+  function renderNav() {
+    var list = $("navList");
+    var q = $("searchBox").value.trim().toLowerCase();
+    var html = "";
+
+    STAGES.forEach(function (stage, si) {
+      var kindsHtml = "";
+      var hasMatch = false;
+
+      KIND_ORDER.forEach(function (kind) {
+        var ds = DATA.filter(function (d) { return d.kind === kind && stageOf(d) === si; })
+          .sort(function (a, b) { return a.year - b.year || a.id.localeCompare(b.id); });
+
+        if (q) {
+          ds = ds.filter(function (d) {
+            return d.title.toLowerCase().indexOf(q) >= 0 ||
+                   String(d.year).indexOf(q) >= 0 ||
+                   (d.session || "").toLowerCase().indexOf(q) >= 0;
+          });
+        }
+        if (ds.length === 0) return;
+        hasMatch = true;
+
+        var kindId = "k" + si + "-" + kind;
+        var kindCount = 0;
+        ds.forEach(function (d) { kindCount += annCountOf(d.id); });
+        var minY = ds[0].year, maxY = ds[ds.length - 1].year;
+        var range = minY === maxY ? String(minY) : minY + "–" + maxY;
+
+        var kindOpen = q ? true : isKindOpen(kindId);
+
+        kindsHtml += '<div class="nav-kind">' +
+          '<div class="nav-kind-head' + (kindOpen ? " open" : "") + '" data-kind="' + kindId + '">' +
+            '<span><span class="caret">▶</span> ' + KIND_LABEL[kind] +
+              ' <span class="stage-range">' + range + '</span></span>' +
+            (kindCount ? '<span class="kind-count">' + kindCount + '</span>' : '') +
+          '</div>';
+        if (kindOpen) {
+          kindsHtml += '<div class="nav-kind-body">';
+          ds.forEach(function (d) {
+            var n = annCountOf(d.id);
+            kindsHtml += '<div class="nav-doc' + (d.id === currentDocId ? " active" : "") + '" data-id="' + d.id + '">' +
+              '<span>' + docLabel(d) + '</span>' +
+              (n ? '<span class="badge">' + n + '</span>' : '') +
+              '</div>';
+          });
+          kindsHtml += '</div>';
+        }
+        kindsHtml += '</div>';
+      });
+
+      if (!hasMatch) return;
+
+      var stageOpen = q ? true : isStageOpen(si);
+
+      html += '<div class="nav-stage">' +
+        '<div class="nav-stage-head' + (stageOpen ? " open" : "") + '" data-stage="' + si + '">' +
+          '<span><span class="caret">▶</span> ' + stage.label + '</span>' +
+        '</div>';
+      if (stageOpen) html += '<div class="nav-stage-body">' + kindsHtml + '</div>';
+      html += '</div>';
+    });
+
+    list.innerHTML = html;
+  }
+
+  function openDoc(id) {
+    currentDocId = id;
+    currentDoc = findDoc(id);
+    if (!currentDoc) return;
+    // 确保当前文档所在阶段/类型默认展开（清除对这些项的显式收起状态）
+    delete openStages[stageOf(currentDoc)];
+    delete openKinds[kindIdOf(currentDoc)];
+    renderNav();
+    renderDoc();
+    $("reader").scrollTop = 0;
+    renderAnnList();
+    renderCtxList();
+    renderAiChat();
+    $("docTitle").textContent = currentDoc.title;
+    saveLastPos();
+  }
+
+  // ---------- 正文渲染（带高亮） ----------
+  function getAnnsFor(docId, paraIdx) {
+    return anns.filter(function (a) { return a.docId === docId && a.paraIdx === paraIdx; })
+      .sort(function (a, b) { return a.start - b.start; });
+  }
+
+  function renderPara(doc, paraIdx) {
+    var text = doc.paras[paraIdx];
+    var p = document.createElement("p");
+    p.className = "para";
+    if (doc.heads.indexOf(paraIdx) >= 0) p.classList.add("para-head");
+    p.dataset.paraIdx = paraIdx;
+    p.dataset.docId = doc.id;
+
+    var list = getAnnsFor(doc.id, paraIdx);
+    if (list.length === 0) {
+      p.textContent = text;
+      return p;
+    }
+    // 区间切分渲染
+    var pts = new Set([0, text.length]);
+    list.forEach(function (a) {
+      var s = Math.max(0, a.start), e = Math.min(text.length, a.end);
+      pts.add(s); pts.add(e);
+    });
+    var sorted = Array.from(pts).sort(function (a, b) { return a - b; });
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < sorted.length - 1; i++) {
+      var segStart = sorted[i], segEnd = sorted[i + 1];
+      if (segEnd <= segStart) continue;
+      var owners = list.filter(function (a) {
+        return a.start <= segStart && a.end >= segEnd;
+      });
+      if (owners.length === 0) {
+        frag.appendChild(document.createTextNode(text.slice(segStart, segEnd)));
+      } else {
+        var mark = document.createElement("mark");
+        mark.textContent = text.slice(segStart, segEnd);
+        mark.dataset.annId = owners[0].id;
+        mark.title = "点击定位到批注";
+        frag.appendChild(mark);
+      }
+    }
+    p.appendChild(frag);
+    return p;
+  }
+
+  function renderDoc() {
+    var prevScroll = $("reader").scrollTop;
+    var inner = $("readerInner");
+    inner.innerHTML = "";
+    var head = document.createElement("div");
+    head.className = "doc-head";
+    head.innerHTML = "<h1>" + esc(currentDoc.title) + "</h1>" +
+      '<div class="meta">共 ' + currentDoc.paras.length + ' 段 · 批注 ' + annCountOf(currentDoc.id) + " 条</div>";
+    inner.appendChild(head);
+    for (var i = 0; i < currentDoc.paras.length; i++) {
+      inner.appendChild(renderPara(currentDoc, i));
+    }
+    $("reader").scrollTop = prevScroll;
+  }
+
+  // 从选区计算段落内偏移（用浏览器原生 Range.toString 精确计算）
+  function getSelectionOffsets(paraEl, sel) {
+    if (!sel || sel.rangeCount === 0) return null;
+    var range = sel.getRangeAt(0);
+    if (!paraEl.contains(range.startContainer) || !paraEl.contains(range.endContainer)) return null;
+    var pre = document.createRange();
+    pre.selectNodeContents(paraEl);
+    pre.setEnd(range.startContainer, range.startOffset);
+    var start = pre.toString().length;
+    pre.selectNodeContents(paraEl);
+    pre.setEnd(range.endContainer, range.endOffset);
+    var end = pre.toString().length;
+    if (start > end) { var tmp = start; start = end; end = tmp; }
+    if (start === end) return null;
+    return { start: start, end: end };
+  }
+
+  // ---------- 选中文字 → 浮动按钮 ----------
+  var floatBtns = $("floatBtns");
+  function hideFloatBtns() { floatBtns.style.display = "none"; }
+  function onSelection() {
+    var sel = window.getSelection();
+    var text = sel ? sel.toString().trim() : "";
+    if (!text) { hideFloatBtns(); return; }
+    // 确保选区在正文某个段落内
+    var range = sel.getRangeAt(0);
+    var paraEl = range ? range.commonAncestorContainer : null;
+    while (paraEl && paraEl !== document && !(paraEl.classList && paraEl.classList.contains("para"))) {
+      paraEl = paraEl.parentElement;
+    }
+    if (!paraEl || !paraEl.classList || !paraEl.classList.contains("para")) {
+      hideFloatBtns();
+      return;
+    }
+    var rect = range.getBoundingClientRect();
+    floatBtns.style.display = "flex";
+    floatBtns.style.left = (rect.left + rect.width / 2) + "px";
+    floatBtns.style.top = (rect.top - 44) + "px";
+    floatBtns._paraEl = paraEl;
+    floatBtns._sel = sel;
+  }
+
+  document.addEventListener("mouseup", function () {
+    setTimeout(onSelection, 10);
+  });
+  document.addEventListener("keyup", function (e) {
+    if (e.key === "Shift") onSelection();
+  });
+
+  // 返回当前选区（段落、Selection、偏移、选中文字），无效则提示并返回 null
+  function selectionOffsets() {
+    var paraEl = floatBtns._paraEl;
+    var sel = floatBtns._sel;
+    if (!paraEl || !sel) return null;
+    var off = getSelectionOffsets(paraEl, sel);
+    if (!off) { toast("请完整选中一段文字"); hideFloatBtns(); return null; }
+    return { paraEl: paraEl, sel: sel, off: off, quote: paraEl.textContent.slice(off.start, off.end).trim() };
+  }
+
+  $("floatBtnAnn").addEventListener("click", function () {
+    var s = selectionOffsets();
+    if (!s) return;
+    pending = {
+      docId: currentDoc.id,
+      paraIdx: parseInt(s.paraEl.dataset.paraIdx, 10),
+      start: s.off.start,
+      end: s.off.end,
+      quote: s.quote
+    };
+    openEditor();
+    hideFloatBtns();
+    s.sel.removeAllRanges();
+  });
+
+  $("floatBtnAI").addEventListener("click", function () {
+    var s = selectionOffsets();
+    if (!s) return;
+    setPanelTab("ai");
+    $("aiInput").value = "「" + s.quote + "」";
+    var end = $("aiInput").value.length;
+    $("aiInput").focus();
+    $("aiInput").setSelectionRange(end, end);
+    hideFloatBtns();
+    s.sel.removeAllRanges();
+    toast("已带入选中文字，补充你的问题后发送");
+  });
+
+  // ---------- 批注编辑器 ----------
+  function openEditor() {
+    setPanelTab("anns");
+    var ed = $("annEditor");
+    ed.style.display = "block";
+    $("annQuotePreview").textContent = pending.quote;
+    $("annNoteInput").value = "";
+    $("annNoteInput").focus();
+  }
+  $("annCancel").addEventListener("click", function () {
+    $("annEditor").style.display = "none";
+    pending = null;
+  });
+  $("annSave").addEventListener("click", function () {
+    if (!pending) return;
+    var note = $("annNoteInput").value.trim();
+    var a = {
+      id: uid(),
+      docId: pending.docId,
+      paraIdx: pending.paraIdx,
+      start: pending.start,
+      end: pending.end,
+      quote: pending.quote,
+      note: note,
+      createdAt: Date.now()
+    };
+    anns.push(a);
+    saveAnns();
+    pending = null;
+    $("annEditor").style.display = "none";
+    renderDoc();
+    renderNav();
+    renderAnnList();
+    renderCtxList();
+    toast("批注已保存");
+  });
+
+  // ---------- 批注列表 ----------
+  function renderAnnList() {
+    var list = $("annList");
+    var data = scope === "current" ? annsOfDoc(currentDocId) :
+      anns.slice().sort(function (a, b) { return a.createdAt - b.createdAt; });
+    $("annCount").textContent = data.length + " 条";
+    if (data.length === 0) {
+      list.innerHTML = '<div class="ann-empty">还没有批注。<br>在正文中选中一段文字，点击「✎ 写批注」即可记录想法。</div>';
+      return;
+    }
+    var html = "";
+    data.forEach(function (a) {
+      var d = findDoc(a.docId);
+      var loc = d ? d.year + (d.kind === "meeting" ? " · " + (d.session || "") : "") : "";
+      html += '<div class="ann-card" data-id="' + a.id + '">' +
+        '<div class="ann-quote">' + esc(a.quote) + "</div>" +
+        '<div class="ann-note' + (a.note ? "" : " empty") + '">' + (a.note ? esc(a.note) : "（无文字，仅高亮）") + "</div>" +
+        '<div class="ann-foot">' +
+          '<span class="loc">' + esc(loc) + " · " + fmtTime(a.createdAt) + "</span>" +
+          '<button class="ann-goto">定位</button>' +
+          '<button class="ann-del">删除</button>' +
+        "</div></div>";
+    });
+    list.innerHTML = html;
+  }
+
+  $("annList").addEventListener("click", function (e) {
+    var card = e.target.closest(".ann-card");
+    if (!card) return;
+    var id = card.dataset.id;
+    var a = anns.find(function (x) { return x.id === id; });
+    if (!a) return;
+    if (e.target.classList.contains("ann-del")) {
+      if (confirm("删除这条批注？")) {
+        anns = anns.filter(function (x) { return x.id !== id; });
+        saveAnns();
+        renderDoc(); renderNav(); renderAnnList(); renderCtxList();
+        toast("已删除");
+      }
+    } else if (e.target.classList.contains("ann-goto")) {
+      gotoAnnotation(a);
+    }
+  });
+
+  function gotoAnnotation(a) {
+    // 切到对应文档
+    if (a.docId !== currentDocId) {
+      openDoc(a.docId);
+    }
+    // 滚动并高亮
+    var marks = document.querySelectorAll('mark[data-ann-id="' + a.id + '"]');
+    if (marks.length) {
+      var m = marks[0];
+      m.scrollIntoView({ block: "center", behavior: "smooth" });
+      m.classList.add("flash");
+      setTimeout(function () { m.classList.remove("flash"); }, 1300);
+    } else {
+      // 定位到段落
+      var p = document.querySelector('.para[data-para-idx="' + a.paraIdx + '"]');
+      if (p) p.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }
+
+  // scope 切换
+  $("scopeCurrent").addEventListener("click", function () { scope = "current"; $("scopeCurrent").classList.add("on"); $("scopeAll").classList.remove("on"); renderAnnList(); });
+  $("scopeAll").addEventListener("click", function () { scope = "all"; $("scopeAll").classList.add("on"); $("scopeCurrent").classList.remove("on"); renderAnnList(); });
+
+  // ---------- 导航交互 ----------
+  $("navList").addEventListener("click", function (e) {
+    var doc = e.target.closest(".nav-doc");
+    if (doc) { openDoc(doc.dataset.id); return; }
+    var kind = e.target.closest(".nav-kind-head");
+    if (kind) { toggleKind(kind.dataset.kind); return; }
+    var stage = e.target.closest(".nav-stage-head");
+    if (stage) { toggleStage(Number(stage.dataset.stage)); return; }
+  });
+
+  var openStages = {}, openKinds = {};   // 显式展开/收起状态：true=展开，false=收起
+  function isStageOpen(si) {
+    if (si in openStages) return openStages[si];
+    return DATA.some(function (d) { return d.id === currentDocId && stageOf(d) === si; });
+  }
+  function isKindOpen(kindId) {
+    if (kindId in openKinds) return openKinds[kindId];
+    return DATA.some(function (d) { return d.id === currentDocId && kindIdOf(d) === kindId; });
+  }
+  function toggleStage(si) { openStages[si] = !isStageOpen(si); renderNav(); }
+  function toggleKind(kid) { openKinds[kid] = !isKindOpen(kid); renderNav(); }
+
+  $("searchBox").addEventListener("input", renderNav);
+
+  // ---------- 导入/导出 ----------
+  $("btnExport").addEventListener("click", function () {
+    if (anns.length === 0) { toast("还没有批注可导出"); return; }
+    var payload = { exportedAt: new Date().toISOString(), count: anns.length, annotations: anns };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "巴菲特批注_" + new Date().toISOString().slice(0, 10) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast("已导出 " + anns.length + " 条批注");
+  });
+
+  $("btnImport").addEventListener("click", function () { $("importFile").click(); });
+  $("importFile").addEventListener("change", function () {
+    var f = this.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var data = JSON.parse(reader.result);
+        var list = data.annotations || data;
+        if (!Array.isArray(list)) throw new Error("格式不对");
+        var imported = 0;
+        list.forEach(function (a) {
+          if (a && a.id && a.docId && a.paraIdx != null && a.quote) {
+            // 去重
+            if (!anns.some(function (x) { return x.id === a.id; })) {
+              anns.push(a); imported++;
+            }
+          }
+        });
+        saveAnns();
+        renderDoc(); renderNav(); renderAnnList(); renderCtxList();
+        toast("成功导入 " + imported + " 条批注");
+      } catch (e) {
+        toast("导入失败：文件格式不正确");
+      }
+    };
+    reader.readAsText(f);
+    this.value = "";
+  });
+
+  // ---------- 右侧 tab 切换 ----------
+  $("tabAnns").addEventListener("click", function () { setPanelTab("anns"); });
+  $("tabAI").addEventListener("click", function () { setPanelTab("ai"); });
+  function setPanelTab(t) {
+    panelTab = t;
+    $("tabAnns").classList.toggle("active", t === "anns");
+    $("tabAI").classList.toggle("active", t === "ai");
+    $("secAnns").classList.toggle("active", t === "anns");
+    $("secAI").classList.toggle("active", t === "ai");
+  }
+
+  // ---------- AI 设置 ----------
+  function loadAiSettings() {
+    try { return JSON.parse(localStorage.getItem(AI_KEY)) || {}; } catch (e) { return {}; }
+  }
+  function saveAiSettings(s) { localStorage.setItem(AI_KEY, JSON.stringify(s)); }
+  function loadAiChats() {
+    try { return JSON.parse(localStorage.getItem(AI_CHAT_KEY)) || {}; } catch (e) { return {}; }
+  }
+  function saveAiChats() { localStorage.setItem(AI_CHAT_KEY, JSON.stringify(aiChats)); }
+  function loadAiSelected() {
+    try { return JSON.parse(localStorage.getItem(AI_SEL_KEY)) || {}; } catch (e) { return {}; }
+  }
+  function saveAiSelected() { localStorage.setItem(AI_SEL_KEY, JSON.stringify(aiSelected)); }
+  function chatOf(docId) { return aiChats[docId] || (aiChats[docId] = []); }
+  function selOf(docId) { return aiSelected[docId] || (aiSelected[docId] = {}); }
+  function applyAiSettings() {
+    var s = loadAiSettings();
+    $("aiKey").value = s.apiKey || DEFAULT_API_KEY;
+    $("aiBase").value = s.base || "https://api.deepseek.com";
+    $("aiModel").value = s.model || "deepseek-chat";
+  }
+  applyAiSettings();
+
+  $("aiSave").addEventListener("click", function () {
+    saveAiSettings({ apiKey: $("aiKey").value.trim(), base: $("aiBase").value.trim(), model: $("aiModel").value.trim() });
+    toast("AI 设置已保存");
+  });
+  $("aiHide").addEventListener("click", function () {
+    $("aiSettings").style.display = $("aiSettings").style.display === "none" ? "block" : "none";
+  });
+  $("btnSettings").addEventListener("click", function () {
+    setPanelTab("ai");
+    $("aiSettings").style.display = "block";
+    $("aiKey").focus();
+  });
+
+  // ---------- AI 上下文勾选 ----------
+  function renderCtxList() {
+    var box = $("ctxList");
+    var docId = currentDocId;
+    var sel = selOf(docId);
+    var data = annsOfDoc(docId);
+    if (data.length === 0) {
+      box.innerHTML = '<div style="color:#8a8a8a">本篇暂无批注</div>';
+      return;
+    }
+    var html = "";
+    data.forEach(function (a) {
+      var checked = sel[a.id] ? " checked" : "";
+      html += '<label class="ctx-item">' +
+        '<input type="checkbox" data-ann="' + a.id + '"' + checked + ">" +
+        '<span class="q">' + esc(a.quote.slice(0, 40)) + (a.quote.length > 40 ? "…" : "") + "</span>" +
+        "</label>";
+    });
+    box.innerHTML = html;
+  }
+  $("ctxList").addEventListener("change", function (e) {
+    var cb = e.target;
+    if (cb.dataset.ann) {
+      var sel = selOf(currentDocId);
+      if (cb.checked) sel[cb.dataset.ann] = true;
+      else delete sel[cb.dataset.ann];
+      saveAiSelected();
+    }
+  });
+  $("ctxClear").addEventListener("click", function () {
+    aiSelected[currentDocId] = {};
+    saveAiSelected();
+    renderCtxList();
+  });
+  $("aiChatClear").addEventListener("click", function () {
+    if (confirm("清空当前文档的 AI 对话？")) {
+      aiChats[currentDocId] = [];
+      saveAiChats();
+      renderAiChat();
+      toast("已清空当前对话");
+    }
+  });
+
+  // ---------- AI 对话 ----------
+  function aiSystemPrompt() {
+    var docInfo = currentDoc
+      ? "用户当前正在阅读的文档是《" + currentDoc.title + "》。"
+      : "用户正在阅读巴菲特相关资料。";
+    return "你是一位深刻理解价值投资、熟悉巴菲特与芒格思想的投资研究伙伴。" +
+      docInfo +
+      "用户正在精读巴菲特致股东信和股东大会问答的中文翻译，会带着自己的批注与你探讨。" +
+      "请用中文回答，语气沉稳、务实、有洞察，必要时指出用户思考中的盲点或值得进一步深挖的问题。" +
+      "回答聚焦于思想与逻辑，不做具体的投资建议。";
+  }
+
+  function buildContextBlock() {
+    var sel = selOf(currentDocId);
+    var selected = annsOfDoc(currentDocId).filter(function (a) { return sel[a.id]; });
+    if (selected.length === 0) return "";
+    var parts = ["以下是用户在当前文档中做的批注（包含原文引用和用户想法）："];
+    selected.forEach(function (a, i) {
+      var d = findDoc(a.docId);
+      var loc = d ? d.year + (d.kind === "meeting" ? " · " + (d.session || "") : "") : "";
+      parts.push((i + 1) + ". [" + loc + "] 原文：「" + a.quote + "」" + (a.note ? " —— 我的想法：" + a.note : ""));
+    });
+    parts.push("请针对以上批注与用户展开讨论。");
+    return parts.join("\n");
+  }
+
+  function addMsg(role, text) {
+    var chat = $("aiChat");
+    var div = document.createElement("div");
+    div.className = "ai-msg " + role;
+    div.textContent = text;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    return div;
+  }
+
+  function renderAiChat() {
+    var chat = $("aiChat");
+    chat.innerHTML = "";
+    chatOf(currentDocId).forEach(function (m) { addMsg(m.role, m.content); });
+    $("aiChatDoc").textContent = currentDoc ? currentDoc.title : "";
+  }
+
+  $("aiSend").addEventListener("click", sendAi);
+  $("aiInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendAi();
+    }
+  });
+
+  function sendAi() {
+    var input = $("aiInput");
+    var text = input.value.trim();
+    if (!text) return;
+    var s = loadAiSettings();
+    var apiKey = s.apiKey || DEFAULT_API_KEY;
+    if (!apiKey) { toast("请先填写 API Key（点击顶部「AI 设置」）"); setPanelTab("ai"); $("aiSettings").style.display = "block"; $("aiKey").focus(); return; }
+
+    var chat = chatOf(currentDocId);
+    var ctxBlock = buildContextBlock();
+    var userContent = ctxBlock ? ctxBlock + "\n\n用户的问题/讨论：" + text : text;
+    addMsg("user", (ctxBlock ? "【附 " + Object.keys(selOf(currentDocId)).length + " 条批注上下文】\n" : "") + text);
+
+    chat.push({ role: "user", content: userContent });
+    saveAiChats();
+    input.value = "";
+
+    var loading = addMsg("assistant", "");
+    loading.innerHTML = '<span class="loading-dots"></span>';
+    $("aiSend").disabled = true;
+
+    var messages = [{ role: "system", content: aiSystemPrompt() }].concat(chat);
+    var base = s.base.replace(/\/+$/, "");
+    fetch(base + "/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
+      body: JSON.stringify({ model: s.model, messages: messages, temperature: 0.6, stream: false })
+    }).then(function (resp) {
+      if (!resp.ok) {
+        return resp.text().then(function (t) {
+          throw new Error("HTTP " + resp.status + ": " + t.slice(0, 200));
+        });
+      }
+      return resp.json();
+    }).then(function (data) {
+      var content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if (!content) throw new Error("返回内容为空");
+      chat.push({ role: "assistant", content: content });
+      saveAiChats();
+      loading.textContent = content;
+    }).catch(function (err) {
+      chat.pop(); // 回退 user 消息
+      saveAiChats();
+      loading.textContent = "出错了：" + err.message;
+      loading.style.color = "#a33a2b";
+    }).finally(function () {
+      $("aiSend").disabled = false;
+      // 把 AI 回复的开头滚到聊天区顶部，方便从第一行开始读（而不是停在最底部）
+      $("aiChat").scrollTop = Math.max(0, loading.offsetTop - 12);
+      $("aiInput").focus();
+    });
+  }
+
+  // ---------- 记住上次阅读位置 ----------
+  var scrollSaveTimer = null;
+  $("reader").addEventListener("scroll", function () {
+    if (scrollSaveTimer) return;
+    scrollSaveTimer = setTimeout(function () {
+      scrollSaveTimer = null;
+      saveLastPos();
+    }, 400);
+  });
+  window.addEventListener("beforeunload", saveLastPos);
+
+  // ---------- 启动 ----------
+  function init() {
+    var last = loadLastPos();
+    var target = (last && findDoc(last.docId)) ? last.docId : null;
+    var first = target ? findDoc(target) : docsOfKind("letter")[0];
+    if (first) {
+      openDoc(first.id);
+      if (last && last.docId === first.id && last.scrollTop > 0) {
+        $("reader").scrollTop = last.scrollTop;
+        saveLastPos();
+      }
+    } else {
+      toast("未找到数据，请确认 data.js 存在");
+    }
+  }
+  init();
+})();
+</script>
+</body>
+</html>

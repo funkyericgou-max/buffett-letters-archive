@@ -8,7 +8,7 @@ import os
 import re
 from pathlib import Path
 
-BASE_DIR = Path(r"c:\Users\Administrator\Desktop\巴菲特信件整理")
+BASE_DIR = Path(__file__).parent
 MEETINGS_DIR = BASE_DIR / "巴菲特股东大会1994-2025"
 OUTPUT_DIR = BASE_DIR / "output"
 

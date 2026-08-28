@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 from docx import Document
 
-BASE_DIR = Path(r"c:\Users\Administrator\Desktop\巴菲特信件整理")
+BASE_DIR = Path(__file__).parent
 LETTERS_DIR = BASE_DIR / "中文翻译"
 OUTPUT_DIR = BASE_DIR / "output"
 

@@ -1332,11 +1332,15 @@ body {
     $("aiSend").disabled = true;
 
     var messages = [{ role: "system", content: aiSystemPrompt() }].concat(chat);
-    var base = s.base.replace(/\/+$/, "");
+    var base = (s.base || "https://api.deepseek.com").replace(/\/+$/, "");
+    var model = s.model || "deepseek-chat";
+    var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 60000) : null;
     fetch(base + "/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
-      body: JSON.stringify({ model: s.model, messages: messages, temperature: 0.6, stream: false })
+      signal: ctrl ? ctrl.signal : undefined,
+      body: JSON.stringify({ model: model, messages: messages, temperature: 0.6, stream: false })
     }).then(function (resp) {
       if (!resp.ok) {
         return resp.text().then(function (t) {
@@ -1353,9 +1357,11 @@ body {
     }).catch(function (err) {
       chat.pop(); // 回退 user 消息
       saveAiChats();
-      loading.textContent = "出错了：" + err.message;
+      var reason = (err && err.name === "AbortError") ? "请求超时（60 秒无响应），请检查网络或 AI 设置（Base URL 是否可访问）" : err.message;
+      loading.textContent = "出错了：" + reason;
       loading.style.color = "#a33a2b";
     }).finally(function () {
+      if (timer) clearTimeout(timer);
       $("aiSend").disabled = false;
       // 把 AI 回复的开头滚到聊天区顶部，方便从第一行开始读（而不是停在最底部）
       $("aiChat").scrollTop = Math.max(0, loading.offsetTop - 12);

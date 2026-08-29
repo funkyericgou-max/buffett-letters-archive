@@ -693,6 +693,17 @@ body {
     localStorage.setItem(STORE_KEY, JSON.stringify(anns));
     autoSave();
   }
+  // 已删除批注（id -> 删除时间戳），用于跨设备同步删除
+  var DEL_KEY = "buffett-reader-deleted-annotations-v1";
+  function loadDeleted() {
+    try { return JSON.parse(localStorage.getItem(DEL_KEY)) || {}; } catch (e) { return {}; }
+  }
+  function saveDeleted(m) { localStorage.setItem(DEL_KEY, JSON.stringify(m)); autoSave(); }
+  function recordDeleted(id, ts) {
+    var m = loadDeleted();
+    m[id] = ts;
+    saveDeleted(m);
+  }
   function loadLastPos() {
     try { return JSON.parse(localStorage.getItem(LAST_POS_KEY)) || null; } catch (e) { return null; }
   }
@@ -1006,7 +1017,8 @@ body {
       end: pending.end,
       quote: pending.quote,
       note: note,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      updatedAt: Date.now()
     };
     anns.push(a);
     saveAnns();
@@ -1054,9 +1066,10 @@ body {
     if (e.target.classList.contains("ann-del")) {
       if (confirm("删除这条批注？")) {
         anns = anns.filter(function (x) { return x.id !== id; });
+        recordDeleted(id, Date.now());
         saveAnns();
         renderDoc(); renderNav(); renderAnnList(); renderCtxList();
-        toast("已删除");
+        toast("已删除（下次同步后其他设备也会删除）");
       }
     } else if (e.target.classList.contains("ann-goto")) {
       gotoAnnotation(a);
@@ -1369,9 +1382,14 @@ body {
 
   function collectUserData() {
     var settings = loadAiSettings();
+    var del = loadDeleted();
     return {
       exportedAt: new Date().toISOString(),
-      annotations: anns,
+      annotations: anns.map(function (a) {
+        var upd = a.updatedAt || a.createdAt || Date.now();
+        return a.updatedAt === upd ? a : Object.assign({}, a, { updatedAt: upd });
+      }),
+      deletedAnnotations: Object.keys(del).map(function (id) { return { id: id, deletedAt: del[id] }; }),
       aiChats: aiChats,
       aiSelected: aiSelected,
       aiSettings: { base: settings.base, model: settings.model },
@@ -1381,16 +1399,37 @@ body {
 
   function applyUserData(d) {
     if (!d) return 0;
-    var added = 0;
-    // 1) 批注：按 id 去重合并
+    var added = 0, removed = 0, i;
+    // 1) 批注：按 updatedAt 后写覆盖（后面的操作覆盖前面的操作）
     if (Array.isArray(d.annotations)) {
       d.annotations.forEach(function (a) {
-        if (a && a.id && a.docId && !anns.some(function (x) { return x.id === a.id; })) {
-          anns.push(a); added++;
+        if (!a || !a.id) return;
+        var upd = a.updatedAt || a.createdAt || 0;
+        for (i = 0; i < anns.length; i++) {
+          if (anns[i].id === a.id) {
+            var lUpd = anns[i].updatedAt || anns[i].createdAt || 0;
+            if (upd > lUpd) { anns[i] = a; }  // 云端版本更新，覆盖本地旧版
+            return;
+          }
         }
+        anns.push(a); added++;
       });
     }
-    // 2) AI 对话：按文档合并，按 (role+content) 去重
+    // 2) 删除记录：合并删除时间线；删除时间晚于本地批注更新时间的即移除
+    if (Array.isArray(d.deletedAnnotations)) {
+      var del = loadDeleted();
+      d.deletedAnnotations.forEach(function (dl) {
+        if (dl && dl.id) del[dl.id] = Math.max(del[dl.id] || 0, dl.deletedAt || 0);
+      });
+      anns = anns.filter(function (x) {
+        var dAt = del[x.id];
+        if (!dAt) return true;
+        if ((x.updatedAt || x.createdAt || 0) < dAt) { removed++; return false; }
+        return true;
+      });
+      saveDeleted(del);
+    }
+    // 3) AI 对话：按文档合并，按 (role+content) 去重
     if (d.aiChats) {
       Object.keys(d.aiChats).forEach(function (docId) {
         var local = aiChats[docId] || (aiChats[docId] = []);
@@ -1401,17 +1440,17 @@ body {
         });
       });
     }
-    // 3) AI 上下文勾选：合并
+    // 4) AI 上下文勾选：合并
     if (d.aiSelected) {
       Object.keys(d.aiSelected).forEach(function (docId) {
         var local = aiSelected[docId] || (aiSelected[docId] = {});
         Object.keys(d.aiSelected[docId] || {}).forEach(function (aid) { local[aid] = true; });
       });
     }
-    // 4) 阅读位置：本地没有才用云端
+    // 5) 阅读位置：本地没有才用云端
     if (!loadLastPos() && d.lastPos) localStorage.setItem(LAST_POS_KEY, JSON.stringify(d.lastPos));
     saveAnns(); saveAiChats(); saveAiSelected();
-    return added;
+    return { added: added, removed: removed };
   }
 
   // 自动保存到本地同步服务（server.py），由其写回仓库的 reader/user-data.js
@@ -1439,7 +1478,10 @@ body {
   // 启动时合并仓库里的 user-data.js（即云端同步的个人数据）
   if (window.BUFFETT_USER_DATA) {
     var _merged = applyUserData(window.BUFFETT_USER_DATA);
-    if (_merged > 0) toast("已合并 GitHub 同步的个人数据 " + _merged + " 条批注");
+    var _msg = [];
+    if (_merged.added > 0) _msg.push("新增 " + _merged.added + " 条");
+    if (_merged.removed > 0) _msg.push("删除 " + _merged.removed + " 条");
+    if (_msg.length > 0) toast("已合并 GitHub 同步的个人数据：" + _msg.join("，"));
     else if (window.BUFFETT_USER_DATA.exportedAt) toast("已读取 GitHub 同步的个人数据");
   }
 

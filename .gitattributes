@@ -1,0 +1,3 @@
+# 跨平台行尾：.command 必须 LF（Mac bash 需要），.bat 用 CRLF（Windows cmd 需要）
+*.command text eol=lf
+*.bat     text eol=crlf
